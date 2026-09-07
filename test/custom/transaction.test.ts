@@ -347,7 +347,20 @@ withDb(() => {
 
     test.each([
       ["empty operations", { dataSource: "local", operations: [] }],
-      ["unknown plan field", { dataSource: "local", operations: [], unexpected: true }],
+      [
+        "unknown plan field",
+        {
+          dataSource: "local",
+          operations: [
+            {
+              operation: "deleteOne",
+              ...target("validation"),
+              filter: {},
+            },
+          ],
+          unexpected: true,
+        },
+      ],
       [
         "unknown operation field",
         {
@@ -363,48 +376,39 @@ withDb(() => {
         },
       ],
       [
-        "missing database",
+        "missing operation target",
         {
           dataSource: "local",
-          operations: [{ operation: "deleteOne", collection: "validation", filter: {} }],
+          operations: [{ operation: "deleteOne", filter: {} }],
         },
       ],
       [
-        "missing collection",
-        {
-          dataSource: "local",
-          operations: [{ operation: "deleteOne", database: "test", filter: {} }],
-        },
-      ],
-      [
-        "empty database",
+        "empty operation target",
         {
           dataSource: "local",
           operations: [
             {
               operation: "deleteOne",
               database: "",
-              collection: "validation",
-              filter: {},
-            },
-          ],
-        },
-      ],
-      [
-        "empty collection",
-        {
-          dataSource: "local",
-          operations: [
-            {
-              operation: "deleteOne",
-              database: "test",
               collection: "",
               filter: {},
             },
           ],
         },
       ],
-      ["invalid data source", { dataSource: "missing", operations: [{}] }],
+      [
+        "invalid data source",
+        {
+          dataSource: "missing",
+          operations: [
+            {
+              operation: "deleteOne",
+              ...target("validation"),
+              filter: {},
+            },
+          ],
+        },
+      ],
     ] as Array<[string, object]>)("rejects %s during preflight validation", async (_name, data) => {
       const startSession = jest.spyOn(client, "startSession");
       const { body, status } = await requester({ url: endPoint, data });
