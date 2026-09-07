@@ -442,6 +442,51 @@ Updates a single document matching a filter.
 }
 ```
 
+## Custom Transaction
+
+Executes an ordered list of MongoDB operations atomically on one configured data source. Each operation selects its own database and collection, so one transaction may span targets on the same deployment.
+
+**Endpoint:** `POST /custom/transaction`
+
+Supported operations are `aggregate`, `countDocuments`, `distinct`, `find`, `findOne`, `insertOne`, `insertMany`, `updateOne`, `updateMany`, `replaceOne`, `deleteOne`, `deleteMany`, `findOneAndUpdate`, `findOneAndReplace`, and `findOneAndDelete`.
+
+`bulkWrite` is not currently supported.
+
+**Request Body Example:**
+
+```json
+{
+  "dataSource": "local",
+  "transactionOptions": {
+    "readPreference": "primary"
+  },
+  "operations": [
+    {
+      "operation": "insertOne",
+      "database": "app",
+      "collection": "users",
+      "document": { "name": "John" }
+    },
+    {
+      "operation": "findOneAndUpdate",
+      "database": "audit",
+      "collection": "events",
+      "filter": { "user": "John" },
+      "update": { "$set": { "processed": true } },
+      "options": { "returnDocument": "after" }
+    }
+  ]
+}
+```
+
+Operations run sequentially in input order. Operation options are passed to the corresponding MongoDB driver method. Top-level `transactionOptions` are passed unchanged to MongoDB's managed transaction API.
+
+A successful transaction returns `{ "status": "committed", "results": [...] }`, with native operation results in request order. Validation, operation, and transaction errors use the same `{ "message": "..." }` response as the default endpoints.
+
+The endpoint does not provide idempotency. If a client loses the response or receives a transaction error, it must not assume rollback or blindly repeat the transaction because MongoDB may have committed. The caller owns deduplication and recovery.
+
+The application does not explicitly react to client disconnects. Transaction execution may continue, response delivery may fail, and session cleanup still runs. A disconnected client must treat the outcome as unknown.
+
 ## Data Source Configuration
 
 Available data sources are configured via the `DATA_SOURCES` environment variable. The default configuration includes:
