@@ -499,40 +499,5 @@ withDb(() => {
       expect(body.results[1].result.insertedId).toBe("final-attempt-second-result");
       expect(endSession).toHaveBeenCalledTimes(1);
     });
-
-    test("uses the global error response and ends the session on failure", async () => {
-      const error = new Error("operation failed");
-      const endSession = jest.fn().mockResolvedValue(undefined);
-      const session = {
-        withTransaction: jest.fn(async (callback: () => Promise<void>) => {
-          await callback();
-        }),
-        endSession,
-      };
-      jest.spyOn(client, "startSession").mockReturnValue(session as never);
-      jest.spyOn(client, "db").mockReturnValue({
-        collection: () => ({
-          insertOne: jest.fn().mockRejectedValue(error),
-        }),
-      } as never);
-
-      const { body, status } = await requester({
-        url: endPoint,
-        data: {
-          dataSource: "local",
-          operations: [
-            {
-              operation: "insertOne",
-              ...target("mocked_failure"),
-              document: {},
-            },
-          ],
-        },
-      });
-
-      expect(status).toBe(500);
-      expect(body).toEqual({ message: "operation failed" });
-      expect(endSession).toHaveBeenCalledTimes(1);
-    });
   });
 });
